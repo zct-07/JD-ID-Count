@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16位数字 ID 提取工具</title>
+<style>
+:root{font-family:"Microsoft YaHei",Arial,sans-serif;color:#1f2937;background:#f3f6fb}
+*{box-sizing:border-box}body{margin:0;padding:24px}.wrap{max-width:1100px;margin:0 auto}
+.card{background:#fff;border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:0 5px 20px #1e293b0d}
+h1{font-size:25px;margin:0 0 8px}.desc{color:#64748b;line-height:1.7;margin:0 0 18px}
+label{display:block;font-weight:600;margin-bottom:8px}
+textarea{width:100%;min-height:250px;resize:vertical;border:1px solid #cbd5e1;border-radius:10px;padding:13px;font:14px/1.6 Consolas,monospace;outline:none}
+textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px #2563eb18}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0}
+button{border:0;border-radius:9px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+.primary{background:#2563eb;color:white}.secondary{background:#e2e8f0;color:#1e293b}.green{background:#059669;color:white}
+.option{display:flex;align-items:center;gap:7px;font-weight:400;color:#475569}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}.stat{background:#eff6ff;padding:10px 14px;border-radius:9px;color:#1d4ed8}
+.stat strong{font-size:20px;margin-right:5px}#output{min-height:220px;background:#f8fafc}
+.note{font-size:13px;color:#64748b;line-height:1.7}
+@media(max-width:600px){body{padding:12px}.card{padding:15px}h1{font-size:21px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section class="card">
+<h1>16位数字 ID 提取工具</h1>
+<p class="desc">提取文本中所有连续的 <b>16 位数字</b>，不限制开头数字。例如：<b>1871475955527688</b>、<b>3060625889051234</b>。按照原文从前到后的顺序输出，不自动排序。</p>
+<label for="input">粘贴文本内容</label>
+<textarea id="input" placeholder="把文本内容粘贴到这里……"></textarea>
+<div class="controls">
+<label class="option"><input id="unique" type="checkbox"> 去重（保留第一次出现的顺序）</label>
+<button class="primary" id="extract">提取16位数字</button>
+<button class="secondary" id="clear">清空</button>
+</div>
+<p class="note">识别规则：匹配独立的连续16位数字。少于或多于16位的连续数字不会被截取；任何恰好连续16位的数字都会匹配。</p>
+</section>
+<section class="card">
+<label for="output">提取结果（每行一个 ID）</label>
+<div class="stats">
+<div class="stat"><strong id="count">0</strong>个结果</div>
+<div class="stat"><strong id="uniqueCount">0</strong>个不同数字</div>
+</div>
+<textarea id="output" placeholder="提取后的16位数字会显示在这里……" readonly></textarea>
+<div class="controls">
+<button class="green" id="copy">复制结果</button>
+<button class="secondary" id="download">下载 TXT</button>
+</div>
+<div class="note" id="message" aria-live="polite"></div>
+</section>
+</div>
+<script>
+const input=document.getElementById('input');
+const output=document.getElementById('output');
+const uniqueBox=document.getElementById('unique');
+const count=document.getElementById('count');
+const uniqueCount=document.getElementById('uniqueCount');
+const message=document.getElementById('message');
+function extractIds(){
+  // 匹配独立的连续16位数字，不限制开头，也不从更长数字中截取。
+  const matches=input.value.match(/(?<!\d)\d{16}(?!\d)/g)||[];
+  const distinct=[...new Set(matches)];
+  const result=uniqueBox.checked?distinct:matches;
+  output.value=result.join('\n');
+  count.textContent=result.length;
+  uniqueCount.textContent=distinct.length;
+  message.textContent=result.length
+    ?`提取完成：原文中找到 ${matches.length} 次，${distinct.length} 个不同的16位数字。`
+    :'没有找到符合规则的16位数字，请检查粘贴的文本。';
+}
+document.getElementById('extract').addEventListener('click',extractIds);
+document.getElementById('clear').addEventListener('click',()=>{
+  input.value='';output.value='';count.textContent='0';uniqueCount.textContent='0';message.textContent='';input.focus();
+});
+document.getElementById('copy').addEventListener('click',async()=>{
+  if(!output.value){message.textContent='请先提取数字。';return;}
+  try{await navigator.clipboard.writeText(output.value);message.textContent='已复制全部结果。';}
+  catch(e){output.focus();output.select();const ok=document.execCommand('copy');message.textContent=ok?'已复制全部结果。':'自动复制失败，请选中结果后手动复制。';}
+});
+document.getElementById('download').addEventListener('click',()=>{
+  if(!output.value){message.textContent='请先提取数字。';return;}
+  const blob=new Blob(['\ufeff'+output.value+'\n'],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download='16位数字ID提取结果.txt';a.click();URL.revokeObjectURL(url);
+  message.textContent='TXT 文件已生成。';
+});
+</script>
+</body>
+</html>
